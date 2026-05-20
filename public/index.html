@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zen · Todo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sage: #8aab8a;
+      --sage-light: #b4c9b4;
+      --sage-pale: #e8f0e8;
+      --mist: #f0f4f0;
+      --stone: #6b7c6b;
+      --charcoal: #2d3a2d;
+      --whisper: #f7faf7;
+      --accent: #7a9e7a;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--whisper);
+      color: var(--charcoal);
+      overflow-x: hidden;
+    }
+
+    /* Animated ambient background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(138,171,138,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at 85% 80%, rgba(180,201,180,0.14) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 50% at 60% 40%, rgba(138,171,138,0.08) 0%, transparent 50%);
+      animation: ambientShift 18s ease-in-out infinite alternate;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes ambientShift {
+      0%   { opacity: 1; transform: scale(1) rotate(0deg); }
+      50%  { opacity: 0.85; transform: scale(1.03) rotate(0.5deg); }
+      100% { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+
+    /* Floating orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(60px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 {
+      width: 300px; height: 300px;
+      background: rgba(138,171,138,0.12);
+      top: -80px; left: -80px;
+      animation: floatOrb1 20s ease-in-out infinite;
+    }
+    .orb-2 {
+      width: 200px; height: 200px;
+      background: rgba(180,201,180,0.1);
+      bottom: 10%; right: -60px;
+      animation: floatOrb2 25s ease-in-out infinite;
+    }
+    .orb-3 {
+      width: 150px; height: 150px;
+      background: rgba(122,158,122,0.08);
+      top: 50%; left: 50%;
+      animation: floatOrb3 30s ease-in-out infinite;
+    }
+
+    @keyframes floatOrb1 {
+      0%, 100% { transform: translate(0,0); }
+      33%       { transform: translate(40px, 60px); }
+      66%       { transform: translate(-20px, 30px); }
+    }
+    @keyframes floatOrb2 {
+      0%, 100% { transform: translate(0,0); }
+      40%       { transform: translate(-50px, -40px); }
+      70%       { transform: translate(20px, -60px); }
+    }
+    @keyframes floatOrb3 {
+      0%, 100% { transform: translate(-50%,-50%) scale(1); }
+      50%       { transform: translate(-50%,-50%) scale(1.4); }
+    }
+
+    /* Layout */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 80px 24px 120px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 60px;
+      animation: fadeDown 0.9s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .header-eyebrow {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 300;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--sage);
+      margin-bottom: 12px;
+    }
+
+    .header-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(48px, 8vw, 72px);
+      font-weight: 300;
+      line-height: 1;
+      color: var(--charcoal);
+      letter-spacing: -0.02em;
+    }
+
+    .header-title em {
+      font-style: italic;
+      color: var(--sage);
+    }
+
+    .header-line {
+      width: 40px;
+      height: 1px;
+      background: var(--sage-light);
+      margin: 20px auto 0;
+      animation: expandLine 1.2s cubic-bezier(0.16,1,0.3,1) 0.4s both;
+    }
+
+    @keyframes expandLine {
+      from { width: 0; opacity: 0; }
+      to   { width: 40px; opacity: 1; }
+    }
+
+    /* Status pill */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--stone);
+      background: rgba(138,171,138,0.12);
+      border: 1px solid rgba(138,171,138,0.25);
+      border-radius: 100px;
+      padding: 4px 12px;
+      margin-top: 16px;
+      letter-spacing: 0.05em;
+    }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--sage);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* Input area */
+    .input-area {
+      margin-bottom: 40px;
+      animation: fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.15s both;
+    }
+
+    .input-wrap {
+      display: flex;
+      gap: 10px;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(138,171,138,0.25);
+      border-radius: 18px;
+      padding: 8px 8px 8px 20px;
+      transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
+    }
+
+    .input-wrap:focus-within {
+      border-color: var(--sage);
+      box-shadow: 0 0 0 4px rgba(138,171,138,0.1), 0 8px 32px rgba(138,171,138,0.12);
+      transform: translateY(-1px);
+    }
+
+    .input-wrap input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--charcoal);
+      outline: none;
+    }
+
+    .input-wrap input::placeholder {
+      color: var(--sage-light);
+    }
+
+    .add-btn {
+      background: var(--charcoal);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      width: 44px; height: 44px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+      flex-shrink: 0;
+    }
+
+    .add-btn:hover {
+      background: var(--sage);
+      transform: scale(1.05);
+      box-shadow: 0 4px 16px rgba(138,171,138,0.3);
+    }
+
+    .add-btn:active { transform: scale(0.95); }
+
+    .add-btn svg { transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+    .add-btn:hover svg { transform: rotate(90deg); }
+
+    /* Section label */
+    .section-label {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--sage-light);
+      margin-bottom: 16px;
+      animation: fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.25s both;
+    }
+
+    /* Todo list */
+    .todo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.3s both;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255,255,255,0.65);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(138,171,138,0.15);
+      border-radius: 14px;
+      padding: 16px 18px;
+      cursor: pointer;
+      transition: transform 0.25s cubic-bezier(0.34,1.2,0.64,1),
+                  box-shadow 0.25s, border-color 0.25s, background 0.25s;
+      animation: itemEnter 0.5s cubic-bezier(0.34,1.2,0.64,1) both;
+    }
+
+    @keyframes itemEnter {
+      from { opacity: 0; transform: translateY(16px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .todo-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(138,171,138,0.12);
+      border-color: rgba(138,171,138,0.3);
+    }
+
+    .todo-item.done {
+      background: rgba(232,240,232,0.5);
+      border-color: rgba(138,171,138,0.2);
+    }
+
+    /* Checkbox */
+    .check-ring {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 1.5px solid var(--sage-light);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 0.3s, background 0.3s, transform 0.3s;
+      position: relative;
+    }
+
+    .todo-item.done .check-ring {
+      background: var(--sage);
+      border-color: var(--sage);
+      transform: scale(1.05);
+    }
+
+    .check-ring::after {
+      content: '';
+      width: 5px; height: 9px;
+      border-right: 1.5px solid white;
+      border-bottom: 1.5px solid white;
+      transform: rotate(45deg) translateY(-1px);
+      opacity: 0;
+      transition: opacity 0.2s 0.1s;
+    }
+
+    .todo-item.done .check-ring::after { opacity: 1; }
+
+    /* Todo text */
+    .todo-text {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 300;
+      color: var(--charcoal);
+      line-height: 1.5;
+      transition: color 0.3s, opacity 0.3s;
+      position: relative;
+    }
+
+    .todo-item.done .todo-text {
+      color: var(--stone);
+      opacity: 0.6;
+    }
+
+    .strikethrough {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      height: 1px;
+      background: var(--stone);
+      width: 0;
+      transition: width 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .todo-item.done .strikethrough { width: 100%; }
+
+    /* Delete */
+    .delete-btn {
+      opacity: 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--sage-light);
+      padding: 4px;
+      border-radius: 8px;
+      transition: opacity 0.2s, color 0.2s, transform 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .todo-item:hover .delete-btn { opacity: 1; }
+    .delete-btn:hover { color: #c97070; transform: scale(1.1); }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 0;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .empty-glyph {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 64px;
+      font-style: italic;
+      color: var(--sage-pale);
+      line-height: 1;
+      margin-bottom: 12px;
+      animation: breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50%       { transform: scale(1.04); opacity: 1; }
+    }
+
+    .empty-text {
+      font-size: 13px;
+      color: var(--sage-light);
+      font-weight: 300;
+      letter-spacing: 0.05em;
+    }
+
+    /* Footer count */
+    .footer {
+      margin-top: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.4s both;
+    }
+
+    .count-text {
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--sage-light);
+      letter-spacing: 0.05em;
+    }
+
+    .clear-btn {
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--sage-light);
+      background: none;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    .clear-btn:hover { color: #c97070; background: rgba(201,112,112,0.06); }
+
+    /* Keyframe helpers */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Removing animation */
+    .todo-item.removing {
+      animation: itemLeave 0.4s cubic-bezier(0.4,0,0.2,1) forwards;
+    }
+
+    @keyframes itemLeave {
+      to { opacity: 0; transform: translateX(20px) scale(0.96); max-height: 0; margin: 0; padding: 0; border-width: 0; }
+    }
+
+    /* Ripple on add */
+    @keyframes ripple {
+      from { transform: scale(0); opacity: 0.4; }
+      to   { transform: scale(4); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="container">
+
+  <header class="header">
+    <p class="header-eyebrow">mindful tasks</p>
+    <h1 class="header-title">Zen <em>&amp;</em> Done</h1>
+    <div class="header-line"></div>
+    <div class="status-pill">
+      <span class="status-dot"></span>
+      <span id="status-text">connecting...</span>
+    </div>
+  </header>
+
+  <div class="input-area">
+    <div class="input-wrap">
+      <input id="todo-input" type="text" placeholder="what needs your attention?" maxlength="120" />
+      <button class="add-btn" id="add-btn" aria-label="Add task">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="8" y1="2" x2="8" y2="14"/>
+          <line x1="2" y1="8" x2="14" y2="8"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <p class="section-label" id="section-label" style="display:none">today's intentions</p>
+
+  <div class="todo-list" id="todo-list"></div>
+
+  <div class="empty-state" id="empty-state">
+    <div class="empty-glyph">∅</div>
+    <p class="empty-text">a clear mind awaits</p>
+  </div>
+
+  <div class="footer" id="footer" style="display:none">
+    <span class="count-text" id="count-text"></span>
+    <button class="clear-btn" id="clear-btn">clear done</button>
+  </div>
+
+</div>
+
+<script>
+  const API = '/api';
+  let todos = [];
+
+  async function fetchHealth() {
+    try {
+      const r = await fetch('/health');
+      const d = await r.json();
+      document.getElementById('status-text').textContent =
+        d.db === 'mongodb' ? 'synced with mongodb' : 'running in-memory';
+    } catch { document.getElementById('status-text').textContent = 'offline'; }
+  }
+
+  async function load() {
+    try {
+      const r = await fetch(`${API}/todos`);
+      todos = await r.json();
+    } catch { todos = []; }
+    render();
+  }
+
+  async function addTodo(text) {
+    try {
+      const r = await fetch(`${API}/todos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const t = await r.json();
+      todos.unshift(t);
+      render();
+    } catch(e) { console.error(e); }
+  }
+
+  async function toggleTodo(id) {
+    const todo = todos.find(t => t._id === id);
+    if (!todo) return;
+    try {
+      const r = await fetch(`${API}/todos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done: !todo.done })
+      });
+      const updated = await r.json();
+      Object.assign(todo, updated);
+      render();
+    } catch(e) { console.error(e); }
+  }
+
+  async function deleteTodo(id) {
+    const el = document.querySelector(`[data-id="${id}"]`);
+    if (el) {
+      el.classList.add('removing');
+      await new Promise(r => setTimeout(r, 380));
+    }
+    try {
+      await fetch(`${API}/todos/${id}`, { method: 'DELETE' });
+      todos = todos.filter(t => t._id !== id);
+      render();
+    } catch(e) { console.error(e); }
+  }
+
+  async function clearDone() {
+    const done = todos.filter(t => t.done);
+    for (const t of done) await deleteTodo(t._id);
+  }
+
+  function render() {
+    const list = document.getElementById('todo-list');
+    const empty = document.getElementById('empty-state');
+    const footer = document.getElementById('footer');
+    const label = document.getElementById('section-label');
+    const count = document.getElementById('count-text');
+
+    const remaining = todos.filter(t => !t.done).length;
+    const total = todos.length;
+
+    list.innerHTML = '';
+
+    if (total === 0) {
+      empty.style.display = 'block';
+      footer.style.display = 'none';
+      label.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    footer.style.display = 'flex';
+    label.style.display = 'block';
+    count.textContent = `${remaining} of ${total} remaining`;
+
+    todos.forEach((todo, i) => {
+      const item = document.createElement('div');
+      item.className = 'todo-item' + (todo.done ? ' done' : '');
+      item.setAttribute('data-id', todo._id);
+      item.style.animationDelay = `${i * 0.05}s`;
+
+      item.innerHTML = `
+        <div class="check-ring"></div>
+        <div class="todo-text">
+          ${escHtml(todo.text)}
+          <div class="strikethrough"></div>
+        </div>
+        <button class="delete-btn" aria-label="Delete">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <line x1="2" y1="2" x2="12" y2="12"/><line x1="12" y1="2" x2="2" y2="12"/>
+          </svg>
+        </button>
+      `;
+
+      item.querySelector('.check-ring').addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleTodo(todo._id);
+      });
+
+      item.querySelector('.delete-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteTodo(todo._id);
+      });
+
+      item.addEventListener('click', () => toggleTodo(todo._id));
+      list.appendChild(item);
+    });
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Input handling
+  const input = document.getElementById('todo-input');
+  const addBtn = document.getElementById('add-btn');
+
+  function handleAdd() {
+    const text = input.value.trim();
+    if (!text) {
+      input.parentElement.style.animation = 'none';
+      input.parentElement.offsetHeight;
+      input.parentElement.style.animation = 'shake 0.3s ease';
+      return;
+    }
+    input.value = '';
+    addTodo(text);
+  }
+
+  addBtn.addEventListener('click', handleAdd);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') handleAdd(); });
+  document.getElementById('clear-btn').addEventListener('click', clearDone);
+
+  // Shake animation for empty input
+  const style = document.createElement('style');
+  style.textContent = `@keyframes shake {
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-6px)}
+    40%{transform:translateX(6px)}
+    60%{transform:translateX(-4px)}
+    80%{transform:translateX(4px)}
+  }`;
+  document.head.appendChild(style);
+
+  fetchHealth();
+  load();
+</script>
+</body>
+</html>
